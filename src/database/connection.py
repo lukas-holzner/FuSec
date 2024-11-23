@@ -144,19 +144,24 @@ class Driver:
                          WHEN f.known_exploited_vulnerability = "TRUE" THEN 8
                          ELSE 1
                      END AS score
-                WITH s.key AS system_key,
-                     s.type AS system_type,
-                     SUM(score) AS total_risk_score
-                RETURN system_key,
-                       system_type,
-                       total_risk_score,
+                WITH s.id AS ID,
+                     s.provider_name AS Provider,
+                     s.type AS Type,
+                     s.sub_type AS Sub_Type,
+                     s.state AS State,
+                     SUM(score) AS Total_Risk_Score
+                RETURN ID,
+                       Type,
+                       Sub_Type,
+                       State,
+                       Total_Risk_Score,
                        CASE 
-                           WHEN total_risk_score >= 32 THEN "Critical"
-                           WHEN total_risk_score >= 16 THEN "High"
-                           WHEN total_risk_score >= 8 THEN "Medium"
+                           WHEN Total_Risk_Score >= 32 THEN "Critical"
+                           WHEN Total_Risk_Score >= 16 THEN "High"
+                           WHEN Total_Risk_Score >= 8 THEN "Medium"
                            ELSE "Low"
                        END AS risk_level
-                ORDER BY total_risk_score DESC
+                ORDER BY Total_Risk_Score DESC
                 """
             )
             return pd.DataFrame([r.data() for r in result])
