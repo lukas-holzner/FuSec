@@ -229,3 +229,14 @@ class Driver:
                 """
             )
             return pd.DataFrame([r.data() for r in result])
+
+    def get_country_count(self):
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (system)-[:in_country]->(country)
+                RETURN country.name AS country, COUNT(system) AS count
+                ORDER BY count DESC
+                """
+            )
+            return pd.DataFrame([r.data() for r in result])

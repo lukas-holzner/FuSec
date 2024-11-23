@@ -13,6 +13,8 @@ total_hosts = driver.get_hosts()
 total_findings = driver.get_findings()
 total_vulnerabilities = driver.get_vulnerabilities()
 total_critical_hosts = driver.get_critical_hosts()
+country_count = driver.get_country_count()
 
 dashboard.display_general_dashboard(total_hosts, total_critical_hosts, total_findings, total_unique_findings, total_vulnerabilities)
 dashboard.display_findings_dashboard(findings_by_severity, total_unique_findings)
+dashboard.display_country_dashboard(country_count)

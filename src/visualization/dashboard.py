@@ -47,6 +47,20 @@ class Dashboard:
 
         st.plotly_chart(fig)
 
+    def display_country_dashboard(self, country_count_df):
+        st.title('Country Dashboard')
+
+        fig = px.choropleth(
+            country_count_df,
+            locations="country",
+            locationmode="country names",
+            color="count",
+            color_continuous_scale="Viridis",
+            title="Occurrences by Country",
+        )
+
+        st.plotly_chart(fig)
+
     def display_investigation_dashboards(self, driver):
         if 'button_state' not in st.session_state:
             st.session_state.button_state = False
