@@ -18,8 +18,6 @@ class Driver:
         config = configparser.ConfigParser()
         config.read(config_path)
 
-        print(config)
-
         # Read connection details from config file
         uri = config['NEO4J']['URI']
         user = config['NEO4J']['USER']
@@ -27,6 +25,48 @@ class Driver:
 
         # Initialize Neo4j driver
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
+
+    # Queries
+    def get_hosts(self):
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (s:System)
+                RETURN COUNT(DISTINCT s.id) AS HostCount
+                """
+            )
+            return result.single().value()
+
+    def get_critical_hosts(self):
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (s:System)
+                WHERE s.critical > 0
+                RETURN COUNT(DISTINCT s.id) AS CriticalHostCount
+                """
+            )
+            return result.single().value()
+
+    def get_findings(self):
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (n:Finding)
+                RETURN COUNT(n) AS FindingCount
+                """
+            )
+            return result.single().value()
+
+    def get_vulnerabilities(self):
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (n:Vulnerability)
+                RETURN COUNT(DISTINCT n.cve) AS VulnerabilityCount
+                """
+            )
+            return result.single().value()
 
     def get_findings_by_severity(self):
         with self.driver.session() as session:
