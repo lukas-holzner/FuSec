@@ -14,14 +14,21 @@ class Driver:
         # Determine absolute path to config.ini
         config_path = os.path.join(os.path.dirname(__file__), '..', 'config.ini')
 
-        # Load configuration
-        config = configparser.ConfigParser()
-        config.read(config_path)
+        if os.path.exists(config_path):
+            # Load configuration
+            config = configparser.ConfigParser()
+            config.read(config_path)
 
-        # Read connection details from config file
-        uri = config['NEO4J']['URI']
-        user = config['NEO4J']['USER']
-        password = config['NEO4J']['PASSWORD']
+            # Read connection details from config file
+            uri = config['NEO4J']['URI']
+            user = config['NEO4J']['USER']
+            password = config['NEO4J']['PASSWORD']
+        else:
+            # Read connection details from environment variables
+            uri = os.getenv('NEO4J_URI')
+            user = os.getenv('NEO4J_USER')
+            password = os.getenv('NEO4J_PASSWORD')
+
 
         # Initialize Neo4j driver
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
