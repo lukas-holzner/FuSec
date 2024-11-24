@@ -13,7 +13,7 @@ def get_vulnerability_by_cve(cve_code):
     nist_url = f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cve_code}"
     response = requests.get(nist_url)
     if response.status_code == 200:
-        return response.json()
+        return response.text
     else:
         print(f"Error: {response.status_code}")
         return None
