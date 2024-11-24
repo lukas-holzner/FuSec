@@ -159,7 +159,7 @@ class Dashboard:
                 max_versions = [seq.get('max_version') for seq in st.session_state.sequences if 'max_version' in seq]
 
                 table, pie_df = driver.advanced_search(publishers, products, min_versions, max_versions)
-                if not include_na_filtered:
+                if not include_na_filtered and 'risk_level' in table.columns:
                     pie_df = pie_df[pie_df['risk_level'] != 'N/A']
                     table = table[table['risk_level'] != 'N/A']
                 fig = px.pie(
