@@ -20,10 +20,11 @@ def get_groq_client():
     if os.path.exists(path):
         config = configparser.ConfigParser()
         config.read(path)
+        api_key = config['GROQ']['API_KEY']
     else:
         api_key = os.getenv('GROQ_API_KEY')
 
-    groq = Groq(api_key=config['GROQ']['API_KEY'])
+    groq = Groq(api_key=api_key)
     return groq
 
 def get_mitigations(cve_details, retries=3):
