@@ -68,97 +68,97 @@ class Dashboard:
         if 'load_data' not in st.session_state:
             st.session_state.load_data = False
 
-        host_criticality_count_df = None
-        host_criticality_df = None
+        if 'selections' not in st.session_state:
+            st.session_state.selections = []
 
-        if not st.session_state.load_data:
-            host_criticality_count_df = driver.get_host_criticality_count()
-            host_criticality_df = driver.get_host_criticality()
-            st.session_state.load_data = True
+        if 'selection_steps' not in st.session_state:
+            st.session_state.selection_steps = []
 
+        if 'sequences' not in st.session_state:
+            st.session_state.sequences = [{}]  # Start with one empty sequence
 
         st.title('Investigation Dashboard')
 
         search_cve = st.text_input('Search', label_visibility='collapsed', placeholder='🔍 Search CVE')
 
         if st.button('Advanced search'):
-            st.session_state.button_state = not st.session_state.button_state
-            st.session_state.load_data = False
+            st.session_state.advanced_search_active = not st.session_state.get('advanced_search_active', False)
 
+        if st.session_state.get('advanced_search_active', False):
+            st.subheader('Advanced Search Options')
 
-        if st.session_state.button_state:
-            st.session_state.load_data = True
-            # Display advanced search options
-            st.subheader('Advanced search options')
-            if 'step' not in st.session_state:
-                st.session_state.step = 0
-                st.session_state.selections = []
+            # Add and remove sequences
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button('➕ Add Sequence'):
+                    st.session_state.sequences.append({})
+            with col2:
+                if st.button('➖ Remove Last Sequence') and len(st.session_state.sequences) > 1:
+                    st.session_state.sequences.pop()
 
-                # Step 1: Select Publisher
-            if st.session_state.step == 0:
+            # Iterate through sequences and dynamically build selection boxes
+            for idx, sequence in enumerate(st.session_state.sequences):
+                st.markdown(f"**Sequence {idx + 1}**")
+
+                # Select Publisher
                 publishers = driver.get_publishers()
-                selected_publisher = st.selectbox("Select Publisher", [''] + publishers)
-
+                selected_publisher = st.selectbox(
+                    f"Publisher for Sequence {idx + 1}",
+                    options=[''] + publishers,
+                    index=publishers.index(sequence.get('publisher', '')) + 1 if 'publisher' in sequence else 0,
+                    key=f"publisher_{idx}",
+                )
                 if selected_publisher:
-                    st.session_state.selections.append(selected_publisher)
-                    st.session_state.step = 1
-                    st.rerun()
+                    st.session_state.sequences[idx]['publisher'] = selected_publisher
 
-                # Step 2: Select Product based on Publisher
-            elif st.session_state.step == 1:
-                selected_publisher = st.session_state.selections[-1]
-                products = driver.get_products(selected_publisher)
-                selected_product = st.selectbox("Select Product", [''] + products)
+                    # Select Product
+                    products = driver.get_products(selected_publisher)
+                    selected_product = st.selectbox(
+                        f"Product for Sequence {idx + 1}",
+                        options=[''] + products,
+                        index=products.index(sequence.get('product', '')) + 1 if 'product' in sequence else 0,
+                        key=f"product_{idx}",
+                    )
+                    if selected_product:
+                        st.session_state.sequences[idx]['product'] = selected_product
 
-                if selected_product:
-                    st.session_state.selections.append(selected_product)
-                    st.session_state.step = 2
-                    st.rerun()
+                        # Select Version
+                        versions = driver.get_versions(selected_publisher, selected_product)
+                        selected_version = st.selectbox(
+                            f"Version for Sequence {idx + 1}",
+                            options=[''] + versions,
+                            index=versions.index(sequence.get('version', '')) + 1 if 'version' in sequence else 0,
+                            key=f"version_{idx}",
+                        )
+                        if selected_version:
+                            st.session_state.sequences[idx]['version'] = selected_version
 
-                # Step 3: Select Version based on Product
-            elif st.session_state.step == 2:
-                selected_publisher, selected_product = st.session_state.selections[-2:]
-                versions = driver.get_versions(selected_publisher, selected_product)
-                selected_version = st.selectbox("Select Version", [''] + versions)
+            # Execute the search when ready
+            if st.button('Execute Search'):
+                # Collect data for search
+                publishers = [seq.get('publisher') for seq in st.session_state.sequences if 'publisher' in seq]
+                products = [seq.get('product') for seq in st.session_state.sequences if 'product' in seq]
+                versions = [seq.get('version') for seq in st.session_state.sequences if 'version' in seq]
 
-                if selected_version:
-                    st.session_state.selections.append(selected_version)
-                    st.session_state.step = 3
-
-            if st.session_state.step == 3:
-                st.session_state.step = 0
-                st.rerun()
-
-                # Execute the search when all selections are made and a button is pressed
-            if st.button("Execute Search"):
-                # Create list of publishers, products, and versions from selections
-                publishers = []
-                products = []
-                versions = []
-
-                for i in range(0, len(st.session_state.selections), 3):
-                    publishers.append(st.session_state.selections[i])
-                    products.append(st.session_state.selections[i + 1] if i + 1 < len(st.session_state.selections) else None)
-                    versions.append(st.session_state.selections[i + 2] if i + 2 < len(st.session_state.selections) else None)
+                print(publishers, products, versions)
 
                 table = driver.advanced_search(publishers, products, versions)
                 st.table(table)
-        else:
 
+
+        else:
             if re.match(r'^CVE-\d{4}-\d{4,}$', search_cve):
                 st.write(f'Showing results for {search_cve}')
             elif search_cve != '🔍 Search CVE':
-                # Search for everything
+                # Handle non-specific search
+                host_criticality_count_df = driver.get_host_criticality_count()
+                host_criticality_df = driver.get_host_criticality()
 
-                if host_criticality_count_df is None or host_criticality_df is None:
-                    host_criticality_count_df = driver.get_host_criticality_count()
-                    host_criticality_df = driver.get_host_criticality()
-                    st.session_state.load_data = True
-                # Add a checkbox to include/exclude 'N/A' values
                 include_na = st.checkbox('Include N/A', value=False)
-
                 if not include_na:
-                    host_criticality_count_df = host_criticality_count_df[host_criticality_count_df['risk_level'] != 'N/A']
+                    host_criticality_count_df = host_criticality_count_df[
+                        host_criticality_count_df['risk_level'] != 'N/A'
+                        ]
                     host_criticality_df = host_criticality_df[host_criticality_df['risk_level'] != 'N/A']
 
                 fig = px.pie(
@@ -172,13 +172,11 @@ class Dashboard:
                         'Low': 'yellow',
                         'Medium': 'orange',
                         'High': 'red',
-                        'Critical': 'darkred'
-                    }
+                        'Critical': 'darkred',
+                    },
                 )
-
                 st.plotly_chart(fig)
 
                 st.subheader('Top 10 Hosts by Criticality')
-
                 host_criticality_df = host_criticality_df.head(10)
                 st.table(host_criticality_df)

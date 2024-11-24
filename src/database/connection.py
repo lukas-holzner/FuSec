@@ -162,6 +162,7 @@ class Driver:
                            ELSE "Low"
                        END AS risk_level
                 ORDER BY Total_Risk_Score DESC
+                LIMIT 10
                 """
             )
             return pd.DataFrame([r.data() for r in result])
