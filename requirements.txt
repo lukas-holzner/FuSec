@@ -3,3 +3,5 @@ neo4j
 pandas
 plotly
 streamlit
+groq
+
