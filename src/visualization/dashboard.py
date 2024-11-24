@@ -88,13 +88,16 @@ class Dashboard:
             st.subheader('Advanced Search Options')
 
             # Add and remove sequences
-            col1, col2 = st.columns([1, 1])
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 if st.button('➕ Add Sequence'):
                     st.session_state.sequences.append({})
             with col2:
                 if st.button('➖ Remove Last Sequence') and len(st.session_state.sequences) > 1:
                     st.session_state.sequences.pop()
+            with col3:
+                if st.button('🔄 Reset Sequences'):
+                    st.session_state.sequences = [{}]
 
             # Iterate through sequences and dynamically build selection boxes
             for idx, sequence in enumerate(st.session_state.sequences):
@@ -122,27 +125,58 @@ class Dashboard:
                     if selected_product:
                         st.session_state.sequences[idx]['product'] = selected_product
 
-                        # Select Version
+                        # Select Version Range
                         versions = driver.get_versions(selected_publisher, selected_product)
-                        selected_version = st.selectbox(
-                            f"Version for Sequence {idx + 1}",
+                        selected_min_version = st.selectbox(
+                            f"Minimum Version for Sequence {idx + 1}",
                             options=[''] + versions,
-                            index=versions.index(sequence.get('version', '')) + 1 if 'version' in sequence else 0,
-                            key=f"version_{idx}",
+                            index=versions.index(
+                                sequence.get('min_version', '')) + 1 if 'min_version' in sequence else 0,
+                            key=f"min_version_{idx}",
                         )
-                        if selected_version:
-                            st.session_state.sequences[idx]['version'] = selected_version
+                        if selected_min_version:
+                            st.session_state.sequences[idx]['min_version'] = selected_min_version
+                            # Remove versions that are less than the selected min version
+                            versions = [version for version in versions if version >= selected_min_version]
 
+                        selected_max_version = st.selectbox(
+                            f"Maximum Version for Sequence {idx + 1}",
+                            options=[''] + versions,
+                            index=versions.index(
+                                sequence.get('max_version', '')) + 1 if 'max_version' in sequence else 0,
+                            key=f"max_version_{idx}",
+                        )
+                        if selected_max_version:
+                            st.session_state.sequences[idx]['max_version'] = selected_max_version
+
+            include_na_filtered = st.checkbox('Include N/A', value=False)
             # Execute the search when ready
             if st.button('Execute Search'):
                 # Collect data for search
                 publishers = [seq.get('publisher') for seq in st.session_state.sequences if 'publisher' in seq]
                 products = [seq.get('product') for seq in st.session_state.sequences if 'product' in seq]
-                versions = [seq.get('version') for seq in st.session_state.sequences if 'version' in seq]
+                min_versions = [seq.get('min_version') for seq in st.session_state.sequences if 'min_version' in seq]
+                max_versions = [seq.get('max_version') for seq in st.session_state.sequences if 'max_version' in seq]
 
-                print(publishers, products, versions)
-
-                table = driver.advanced_search(publishers, products, versions)
+                table, pie_df = driver.advanced_search(publishers, products, min_versions, max_versions)
+                if not include_na_filtered:
+                    pie_df = pie_df[pie_df['risk_level'] != 'N/A']
+                    table = table[table['risk_level'] != 'N/A']
+                fig = px.pie(
+                    pie_df,
+                    names='risk_level',
+                    values='count',
+                    title='Host Criticality',
+                    color='risk_level',
+                    color_discrete_map={
+                        'N/A': 'green',
+                        'Low': 'yellow',
+                        'Medium': 'orange',
+                        'High': 'red',
+                        'Critical': 'darkred',
+                    },
+                )
+                st.plotly_chart(fig)
                 st.table(table)
 
 
