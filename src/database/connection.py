@@ -207,6 +207,87 @@ class Driver:
             )
             return [r['Version'] for r in result]
 
+    def get_systems_by_cve_vulnerability(self, cve):
+        with self.driver.session() as session:
+            tableresult = session.run(
+                f"""
+                MATCH (v:Vulnerability)--(n:Weakness)--(s:System)
+                WHERE v.cve = "{cve}" 
+                WITH s
+                OPTIONAL MATCH (s)<-[:runs_on]-(a:Application)-[:related_weakness]->(f1:Finding)
+                OPTIONAL MATCH (s)-[:related_weakness]->(f2:Finding)
+                WITH s, 
+                     COLLECT(f1) + COLLECT(f2) AS all_findings
+                UNWIND all_findings AS f
+                WITH s, 
+                     CASE 
+                         WHEN f.severity = "Low" THEN 1
+                         WHEN f.severity = "Medium" THEN 2
+                         WHEN f.severity = "High" THEN 4
+                         ELSE 0
+                     END * 
+                     CASE 
+                         WHEN f.known_exploited_vulnerability = "TRUE" THEN 8
+                         ELSE 1
+                     END AS score
+                WITH s.id AS ID,
+                     s.provider_name AS Provider,
+                     s.type AS Type,
+                     s.sub_type AS Sub_Type,
+                     s.state AS State,
+                     SUM(score) AS Total_Risk_Score
+                RETURN ID,
+                       Type,
+                       Sub_Type,
+                       State,
+                       Total_Risk_Score,
+                       CASE 
+                           WHEN Total_Risk_Score >= 32 THEN "Critical"
+                           WHEN Total_Risk_Score >= 16 THEN "High"
+                           WHEN Total_Risk_Score >= 8 THEN "Medium"
+                           ELSE "Low"
+                       END AS risk_level
+                ORDER BY Total_Risk_Score DESC
+                LIMIT 10
+                """
+            )
+            # Pie Chart
+            pieresult = session.run(
+                f"""
+                MATCH (v:Vulnerability)--(n:Weakness)--(s:System)
+                WHERE v.cve = "{cve}" 
+                WITH s
+                OPTIONAL MATCH (s)<-[:runs_on]-(a:Application)-[:related_weakness]->(f1:Finding)
+                OPTIONAL MATCH (s)-[:related_weakness]->(f2:Finding)
+                WITH s, COLLECT(f1) + COLLECT(f2) AS allFindings
+                
+                // Ensure that we handle cases where there are no findings
+                WITH s, allFindings, CASE WHEN SIZE(allFindings) = 0 THEN 0 ELSE REDUCE(total = 0, f IN allFindings | 
+                    total + CASE 
+                        WHEN f.severity = "Low" AND f.known_exploited_vulnerability = "FALSE" THEN 1
+                        WHEN f.severity = "Low" AND f.known_exploited_vulnerability = "TRUE" THEN 8
+                        WHEN f.severity = "Medium" AND f.known_exploited_vulnerability = "FALSE" THEN 2
+                        WHEN f.severity = "Medium" AND f.known_exploited_vulnerability = "TRUE" THEN 16
+                        WHEN f.severity = "High" AND f.known_exploited_vulnerability = "FALSE" THEN 4
+                        WHEN f.severity = "High" AND f.known_exploited_vulnerability = "TRUE" THEN 32
+                        ELSE 0
+                    END)
+                END AS total_risk_score
+                
+                WITH CASE 
+                         WHEN total_risk_score = 0 THEN "N/A"
+                         WHEN total_risk_score >= 32 THEN "Critical"
+                         WHEN total_risk_score >= 16 THEN "High"
+                         WHEN total_risk_score >= 8 THEN "Medium"
+                         ELSE "Low"
+                     END AS risk_level
+                RETURN risk_level, COUNT(*) AS count
+                ORDER BY count DESC
+                """
+            )
+
+            return pd.DataFrame([r.data() for r in tableresult]), pd.DataFrame([r.data() for r in pieresult])
+
     def advanced_search(self, publishers, products=None, min_versions=None, max_versions=None):
         with self.driver.session() as session:
             # Ensure publishers, products, and versions are lists for iteration

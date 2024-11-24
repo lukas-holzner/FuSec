@@ -182,8 +182,27 @@ class Dashboard:
 
         else:
             if re.match(r'^CVE-\d{4}-\d{4,}$', search_cve):
-                st.write(f'Showing results for {search_cve}')
+                st.subheader(f'Filtering Systems by {search_cve}')
+                table_df, pie_df = driver.get_systems_by_cve_vulnerability(search_cve)
+
+                fig = px.pie(
+                    pie_df,
+                    names='risk_level',
+                    values='count',
+                    title='Host Criticality',
+                    color='risk_level',
+                    color_discrete_map={
+                        'N/A': 'green',
+                        'Low': 'yellow',
+                        'Medium': 'orange',
+                        'High': 'red',
+                        'Critical': 'darkred',
+                    },
+                )
+                st.plotly_chart(fig)
+                st.table(table_df)
             elif search_cve != '🔍 Search CVE':
+                st.subheader('Showing all Systems')
                 # Handle non-specific search
                 host_criticality_count_df = driver.get_host_criticality_count()
                 host_criticality_df = driver.get_host_criticality()
