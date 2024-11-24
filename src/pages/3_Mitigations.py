@@ -76,7 +76,7 @@ def display_mitigations():
             cve_details_from_db = get_vulnerability_by_cve(cve_id)
             if cve_details_from_db is not None:
                 st.session_state.cve_details = cve_details_from_db
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error('CVE not found')
         else:
