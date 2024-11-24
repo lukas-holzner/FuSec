@@ -117,6 +117,11 @@ class Driver:
                     END)
                 END AS total_risk_score
                 
+                WITH CASE
+                    WHEN s.critical = 1 THEN total_risk_score * 2
+                    ELSE total_risk_score
+                END AS total_risk_score
+                
                 WITH CASE 
                          WHEN total_risk_score = 0 THEN "N/A"
                          WHEN total_risk_score >= 32 THEN "Critical"
@@ -150,17 +155,30 @@ class Driver:
                      CASE 
                          WHEN f.known_exploited_vulnerability = "TRUE" THEN 8
                          ELSE 1
-                     END AS score
+                     END AS score,
+                     s.critical AS Critical
                 WITH s.id AS ID,
                      s.provider_name AS Provider,
                      s.type AS Type,
                      s.sub_type AS Sub_Type,
                      s.state AS State,
-                     SUM(score) AS Total_Risk_Score
+                     s.critical AS Critical,
+                     SUM(score) AS Base_Risk_Score
+                WITH ID,
+                     Provider,
+                     Type,
+                     Sub_Type,
+                     State,
+                     Critical,
+                     CASE 
+                         WHEN Critical = 1 THEN Base_Risk_Score * 2
+                         ELSE Base_Risk_Score
+                     END AS Total_Risk_Score
                 RETURN ID,
                        Type,
                        Sub_Type,
                        State,
+                       Critical,
                        Total_Risk_Score,
                        CASE 
                            WHEN Total_Risk_Score >= 32 THEN "Critical"
@@ -168,8 +186,7 @@ class Driver:
                            WHEN Total_Risk_Score >= 8 THEN "Medium"
                            ELSE "Low"
                        END AS risk_level
-                ORDER BY Total_Risk_Score DESC
-                LIMIT 10
+                ORDER BY Total_Risk_Score DESC LIMIT 10
                 """
             )
             return pd.DataFrame([r.data() for r in result])
@@ -229,17 +246,30 @@ class Driver:
                      CASE 
                          WHEN f.known_exploited_vulnerability = "TRUE" THEN 8
                          ELSE 1
-                     END AS score
+                     END AS score,
+                     s.critical AS Critical
                 WITH s.id AS ID,
                      s.provider_name AS Provider,
                      s.type AS Type,
                      s.sub_type AS Sub_Type,
                      s.state AS State,
-                     SUM(score) AS Total_Risk_Score
+                     s.critical AS Critical,
+                     SUM(score) AS Base_Risk_Score
+                WITH ID,
+                     Provider,
+                     Type,
+                     Sub_Type,
+                     State,
+                     Critical,
+                     CASE 
+                         WHEN Critical = 1 THEN Base_Risk_Score * 2
+                         ELSE Base_Risk_Score
+                     END AS Total_Risk_Score
                 RETURN ID,
                        Type,
                        Sub_Type,
                        State,
+                       Critical,
                        Total_Risk_Score,
                        CASE 
                            WHEN Total_Risk_Score >= 32 THEN "Critical"
@@ -247,8 +277,7 @@ class Driver:
                            WHEN Total_Risk_Score >= 8 THEN "Medium"
                            ELSE "Low"
                        END AS risk_level
-                ORDER BY Total_Risk_Score DESC
-                LIMIT 10
+                ORDER BY Total_Risk_Score DESC LIMIT 10
                 """
             )
             # Pie Chart
@@ -272,6 +301,11 @@ class Driver:
                         WHEN f.severity = "High" AND f.known_exploited_vulnerability = "TRUE" THEN 32
                         ELSE 0
                     END)
+                END AS total_risk_score
+                
+                WITH CASE
+                    WHEN s.critical = 1 THEN total_risk_score * 2
+                    ELSE total_risk_score
                 END AS total_risk_score
                 
                 WITH CASE 
@@ -336,17 +370,30 @@ class Driver:
                      CASE 
                          WHEN f.known_exploited_vulnerability = "TRUE" THEN 8
                          ELSE 1
-                     END AS score
+                     END AS score,
+                     s.critical AS Critical
                 WITH s.id AS ID,
                      s.provider_name AS Provider,
                      s.type AS Type,
                      s.sub_type AS Sub_Type,
                      s.state AS State,
-                     SUM(score) AS Total_Risk_Score
+                     s.critical AS Critical,
+                     SUM(score) AS Base_Risk_Score
+                WITH ID,
+                     Provider,
+                     Type,
+                     Sub_Type,
+                     State,
+                     Critical,
+                     CASE 
+                         WHEN Critical = 1 THEN Base_Risk_Score * 2
+                         ELSE Base_Risk_Score
+                     END AS Total_Risk_Score
                 RETURN ID,
                        Type,
                        Sub_Type,
                        State,
+                       Critical,
                        Total_Risk_Score,
                        CASE 
                            WHEN Total_Risk_Score >= 32 THEN "Critical"
@@ -354,8 +401,7 @@ class Driver:
                            WHEN Total_Risk_Score >= 8 THEN "Medium"
                            ELSE "Low"
                        END AS risk_level
-                ORDER BY Total_Risk_Score DESC
-                LIMIT 10
+                ORDER BY Total_Risk_Score DESC LIMIT 10
                 """
             )
 
@@ -380,6 +426,11 @@ class Driver:
                         WHEN f.severity = "High" AND f.known_exploited_vulnerability = "TRUE" THEN 32
                         ELSE 0
                     END)
+                END AS total_risk_score
+                
+                WITH CASE
+                    WHEN s.critical = 1 THEN total_risk_score * 2
+                    ELSE total_risk_score
                 END AS total_risk_score
                 
                 WITH CASE 
